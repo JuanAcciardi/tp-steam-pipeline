@@ -1,0 +1,3 @@
+# El pipeline corre en WSL: forzamos LF aunque se edite desde Windows.
+* text=auto eol=lf
+*.sh text eol=lf

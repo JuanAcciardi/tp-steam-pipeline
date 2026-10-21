@@ -1,0 +1,39 @@
+# Datos: nunca se versionan (se regeneran con el pipeline)
+data/
+landing/
+datasets/
+*.csv
+*.json.gz
+*.zip
+*.parquet
+*.duckdb
+*.duckdb.wal
+# PII sintética
+user_profiles*.csv
+# Evidencias generadas localmente (copiar a mano a docs/ las que se entregan)
+docs/idempotency_*.json
+
+# Secretos
+.env
+*.secret
+
+# Python / tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Airflow local
+logs/
+airflow.cfg
+airflow.db
+standalone_admin_password.txt
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

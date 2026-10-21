@@ -1,0 +1,7 @@
+# Dependencias del pipeline sobre la imagen apache/airflow:3.0.4-python3.12.
+# Se instalan con el constraints file de Airflow (ver Dockerfile) para que todo el equipo
+# tenga exactamente las mismas versiones.
+pandas
+pyarrow
+duckdb
+pytest
