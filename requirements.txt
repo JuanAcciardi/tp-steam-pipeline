@@ -1,0 +1,9 @@
+# Instalar SIEMPRE con el constraints file de Airflow para que todo el equipo tenga las mismas versiones:
+#   pip install -r requirements.txt --constraint \
+#     "https://raw.githubusercontent.com/apache/airflow/constraints-3.0.4/constraints-3.12.txt"
+apache-airflow==3.0.4
+pandas
+pyarrow
+duckdb
+faker
+pytest
