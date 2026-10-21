@@ -3,7 +3,8 @@
 Hace cuatro cosas, todas determinísticas (misma semilla -> mismos archivos byte a byte):
 
 1. Muestrea recommendations.csv (~2 GB) a un volumen dentro del rango de la consigna
-   (50-300 MB): usuarios con user_id % --user-modulo == 0 y reviews desde --min-date.
+   (50-300 MB): --sample-pct % de los usuarios (user_id % 10000 < pct*100) y sus
+   reviews desde --min-date. Con el default (7%, 2020-2022) quedan ~240 MB.
 2. Genera la tabla sintética de PII user_profiles (nombre, username, email, teléfono).
 3. Inyecta imperfecciones documentadas (ver README, "Imperfecciones simuladas"), porque
    el dataset publicado ya viene limpio.
@@ -45,11 +46,12 @@ ORPHAN_APP_ID_BASE = 9_000_000
 
 # --------------------------------------------------------------------------- muestreo
 
-def sample_recommendations(raw_dir: Path, modulo: int, min_date: str, max_date: str | None) -> pd.DataFrame:
+def sample_recommendations(raw_dir: Path, sample_pct: float, min_date: str, max_date: str | None) -> pd.DataFrame:
+    buckets = round(sample_pct * 100)  # sobre 10.000 buckets de user_id
     parts = []
     reader = pd.read_csv(raw_dir / "recommendations.csv", chunksize=2_000_000, dtype={"date": "string"})
     for i, chunk in enumerate(reader, start=1):
-        mask = (chunk["user_id"] % modulo == 0) & (chunk["date"] >= min_date)
+        mask = (chunk["user_id"] % 10_000 < buckets) & (chunk["date"] >= min_date)
         if max_date:
             mask &= chunk["date"] <= max_date
         parts.append(chunk[mask])
@@ -70,7 +72,8 @@ def read_metadata(path: Path) -> list[dict]:
     text = path.read_text(encoding="utf-8")
     if text.lstrip().startswith("["):
         return json.loads(text)
-    return [json.loads(line) for line in text.splitlines() if line.strip()]
+    # split("\n") y no splitlines(): las descripciones traen U+2028 dentro de los strings.
+    return [json.loads(line) for line in text.split("\n") if line.strip()]
 
 
 # --------------------------------------------------------------------------- PII sintética
@@ -85,7 +88,8 @@ def _name_pool(seed: int, attr: str, per_locale: int = 600) -> np.ndarray:
     for i, locale in enumerate(FAKER_LOCALES):
         fake = Faker(locale)
         fake.seed_instance(seed + i)
-        names.update(n for n in (_ascii(getattr(fake, attr)()) for _ in range(per_locale)) if n)
+        # Solo la primera palabra: "Tomás Benjamín" -> "Tomas", así username/email quedan prolijos.
+        names.update(n for n in (_ascii(getattr(fake, attr)().split()[0]) for _ in range(per_locale)) if n)
     return np.array(sorted(names))
 
 
@@ -247,7 +251,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--raw-dir", type=Path, required=True, help="Carpeta con los CSV/JSON de Kaggle")
     parser.add_argument("--landing-dir", type=Path, default=Path("~/airflow/landing"))
-    parser.add_argument("--user-modulo", type=int, default=20, help="Se queda con user_id %% N == 0")
+    parser.add_argument("--sample-pct", type=float, default=7.0, help="%% de usuarios a conservar")
     parser.add_argument("--min-date", default="2020-01-01")
     parser.add_argument("--max-date", default=None)
     parser.add_argument("--seed", type=int, default=2026)
@@ -264,7 +268,7 @@ def main() -> None:
         shutil.rmtree(landing)
 
     print("Muestreando recommendations...")
-    recs = sample_recommendations(raw_dir, args.user_modulo, args.min_date, args.max_date)
+    recs = sample_recommendations(raw_dir, args.sample_pct, args.min_date, args.max_date)
     cohort = (
         pd.to_datetime(recs["date"]).dt.strftime("%Y_%m").groupby(recs["user_id"]).min().rename("_month")
     )
@@ -302,7 +306,7 @@ def main() -> None:
     total_mb = sum(sizes.values()) / 1024**2
     manifest = {
         "seed": args.seed,
-        "user_modulo": args.user_modulo,
+        "sample_pct": args.sample_pct,
         "min_date": args.min_date,
         "max_date": args.max_date,
         "first_month": months[0].replace("_", "-"),
@@ -316,7 +320,7 @@ def main() -> None:
 
     print(json.dumps(manifest, indent=2))
     if not 50 <= total_mb <= 300:
-        print(f"\nATENCIÓN: {total_mb:.0f} MB está fuera del rango 50-300 MB. Ajustar --user-modulo o --min-date.")
+        print(f"\nATENCIÓN: {total_mb:.0f} MB está fuera del rango 50-300 MB. Ajustar --sample-pct o --min-date.")
     print(
         f"\nActualizar dags/steam_lib/config.py:\n"
         f'    FIRST_MONTH = "{manifest["first_month"]}"\n    LAST_MONTH = "{manifest["last_month"]}"'

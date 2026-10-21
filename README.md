@@ -79,6 +79,24 @@ build_gold_partition >> update_duckdb_catalog >> audit_counts
 - `full_name` y `phone_number` se eliminan en Silver porque no tienen uso analítico.
 - El salt se lee con `Variable.get("PII_SALT")` **dentro** del task `mask_pii`, nunca a nivel de módulo, y no aparece en ningún archivo del repo.
 
+## Muestra del dataset
+
+El dataset de Kaggle pesa ~2,1 GB (41,2M reviews entre 2010-10 y 2022-12), muy por encima del rango
+de 50–300 MB de la consigna. `prepare_source.py` toma una muestra determinística por usuario:
+**7% de los usuarios** (`user_id % 10000 < 700`) con todas sus reviews de **2020-01 a 2022-12**.
+Por usuario y no por fila, para que los historiales y las cohortes queden completos.
+
+| Tabla (landing) | Filas | MB |
+|---|---|---|
+| recommendations (36 archivos mensuales) | 1.809.637 + imperfecciones | 122,4 |
+| users | 739.396 | 9,6 |
+| user_profiles (PII sintética) | 739.396 | 66,4 |
+| games | 50.872 | 4,7 |
+| games_metadata | 50.872 | 17,3 |
+| **Total** | | **220,4** |
+
+Con la misma semilla (`--seed 2026`, el default) el resultado es idéntico byte a byte en cualquier máquina.
+
 ## Imperfecciones simuladas
 
 El dataset publicado ya viene limpio. Para poder demostrar la higiene de datos,
