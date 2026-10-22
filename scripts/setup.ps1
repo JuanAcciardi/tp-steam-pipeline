@@ -43,7 +43,7 @@ docker compose up airflow-init
 if ($LASTEXITCODE -ne 0) { throw "Fallo airflow-init" }
 
 Write-Host "5/6 Guardando PII_SALT como Airflow Variable (no queda en ningun archivo)..."
-$secure = Read-Host "    PII_SALT (es el mismo para todo el equipo, pediselo a los chicos)" -AsSecureString
+$secure = Read-Host "    PII_SALT (el que se paso por el grupo de WhatsApp)" -AsSecureString
 $salt = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
     [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
 if ([string]::IsNullOrWhiteSpace($salt)) { throw "PII_SALT vacio" }

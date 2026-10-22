@@ -4,6 +4,20 @@ Pipeline end-to-end local orquestado con **Apache Airflow 3.0.4** (Docker Compos
 reviews de Steam en una arquitectura medallion (Bronze → Silver → Gold) sobre el filesystem
 local y expone Gold a **DuckDB** con particionado Hive para validar el partition pruning.
 
+## Empezá acá (integrantes del equipo)
+
+1. **Si clonaste el repo antes del 22/10/2026:** borrá tu copia y volvé a clonar. El historial
+   se reescribió y tu copia vieja no es compatible.
+2. Instalá [Docker Desktop](https://www.docker.com/products/docker-desktop/) (le tienen que
+   quedar al menos 4 GB de RAM), [git](https://git-scm.com/) y [GitHub CLI](https://cli.github.com/).
+   Después corré `gh auth login`.
+3. **Tené a mano el `PII_SALT` que se pasó por el grupo de WhatsApp.** El setup te lo va a pedir.
+   **Nunca** lo escribas en un archivo del repo, en un commit, en un issue ni en un PR: la consigna
+   exige que no aparezca en ningún archivo versionado.
+4. Corré el setup (sección siguiente) y activá el DAG.
+5. Mirá [Estado del TP](#estado-del-tp) para ver qué falta, y
+   [docs/team_workflow.md](docs/team_workflow.md) para saber cómo trabajar con ramas y PRs.
+
 ## Estructura
 
 ```
@@ -37,11 +51,34 @@ El script hace todo, y se puede volver a correr sin pisar lo que ya existe:
 1. Genera `.env` con una Fernet key propia, que cifra las Variables en la metadata DB.
 2. Descarga el dataset de origen (y verifica su SHA-256) desde el release [`dataset-v1`](https://github.com/JuanAcciardi/tp-steam-pipeline/releases/tag/dataset-v1) (zip de 146 MB) y lo descomprime en `landing/` (399,9 MB).
 3. Construye la imagen e inicializa Airflow.
-4. Pide el `PII_SALT` y lo guarda con `airflow variables set PII_SALT ...`. Es el mismo para todo el equipo y se comparte por fuera del repo.
+4. Pide el `PII_SALT` (el del grupo de WhatsApp) y lo guarda con `airflow variables set PII_SALT ...`.
+   No se escribe en ningún archivo. Tiene que ser el mismo para los 5, así los hashes coinciden.
 5. Levanta Airflow en http://localhost:8080 (usuario `airflow`, clave `airflow`).
 
 Día a día: `docker compose up -d` / `docker compose down`.
 CLI de Airflow: `docker compose run --rm airflow-cli airflow <comando>`.
+
+### Correr el pipeline
+
+- **Backfill completo:** en la UI, activar (unpause) `steam_medallion_pipeline`. Airflow crea un
+  run por mes, de 2020-01 a 2022-12 (36 runs), y los ejecuta en orden, de a uno.
+- **Un mes puntual:** *Trigger DAG* con params `{"month": "2021-03"}`, o *Clear* sobre un run existente.
+- **Ver el resultado:** las capas quedan en `data/`. Para consultar Gold con DuckDB:
+  ```bash
+  docker compose exec airflow-scheduler python -c "import duckdb; print(duckdb.connect('data/catalog.duckdb').sql('SELECT year, month, COUNT(*) FROM user_game_reviews GROUP BY ALL ORDER BY ALL'))"
+  ```
+- **Empezar de cero:** `docker compose down -v` y borrar `data/` (no borren `landing/`, es el dataset).
+
+### Problemas comunes
+
+| Síntoma | Solución |
+|---|---|
+| El puerto 8080 está ocupado | Hay otro Airflow levantado (por ejemplo, el de otra materia). Bajalo con `docker compose down` en su carpeta. |
+| Docker se cae o el disco C: se llena | Docker Desktop → Settings → Resources → Advanced → *Disk image location* → elegí otro disco → *Apply & restart*. |
+| `Falta gh autenticado` | `gh auth login`, y verificá que aceptaste la invitación al repo. |
+| `Falta AIRFLOW_FERNET_KEY en .env` | Corré el script de setup (genera `.env`). No copies el `.env` de otro integrante. |
+| El DAG no aparece o muestra *Import error* | `docker compose run --rm airflow-cli airflow dags list-import-errors` |
+| `mask_pii` falla con `PII_SALT vacío` | `docker compose run --rm airflow-cli airflow variables set PII_SALT '<el del WhatsApp>'` |
 
 > La consigna propone `airflow standalone` en WSL. Usamos Docker Compose con la misma versión
 > (3.0.4) para que los 5 integrantes tengan un entorno idéntico sin importar el sistema operativo.
@@ -176,6 +213,33 @@ docker compose exec airflow-scheduler python scripts/idempotency_check.py snapsh
 # Clear del run 2021-03 en la UI (o trigger con params {"month": "2021-03"})
 docker compose exec airflow-scheduler python scripts/idempotency_check.py compare --month 2021-03 --baseline docs/idempotency_before.json
 ```
+
+## Estado del TP
+
+Actualizado al 22/10/2026.
+
+| Requisito de la consigna | Estado |
+|---|---|
+| Dataset ≥3 tablas, fecha nativa, PII sintética, datos sucios | ✅ release `dataset-v1` (5 tablas, 2020-01 → 2022-12) |
+| Tamaño 50–300 MB | ⚠️ son 399,9 MB descomprimidos. Decisión del equipo: hay que justificarla en la defensa o bajar la muestra |
+| Estructura `bronze/{table}/ingested_year=/ingested_month=`, `silver/{table}`, `gold/{dataset}/year=/month=` | ✅ implementada |
+| Silver con pandas + pyarrow en `@task`, dedup, tipado, nulos documentados | ✅ implementado y documentado en este README |
+| PII con SHA-256 + salt, salt en Airflow Variable leída dentro del task | ✅ HMAC-SHA256, `Variable.get` dentro de `mask_pii` |
+| Gold con ≥4 entidades y particionado Hive | ✅ 5 entidades |
+| DAG con ≥5 tasks y `>>` | ✅ 9 tasks |
+| Idempotencia (overwrite de particiones) | ✅ implementada; validada sin Airflow (re-run de un mes → conteos idénticos) |
+| DuckDB EXPLAIN ANALYZE full vs. pruned | ✅ script listo; validado sin Airflow (36 → 1 Parquet, −95% de filas) |
+| Repo con `/dags`, `/scripts`, `/sql`, `/docs` y `.gitignore` | ✅ |
+| Ramas `main` / `develop` / `feature/*` con PRs | ✅ en uso. ⚠️ La protección automática de `main` no está activa (repo privado + cuenta gratuita); se activa con GitHub Education/Pro. Mientras tanto, **nadie pushea directo a `main` ni a `develop`** |
+
+### Próximos pasos
+
+- [ ] Correr el backfill completo **dentro de Airflow** y revisar los logs de cada task.
+- [ ] Generar las evidencias de la entrega y commitearlas en `docs/`: `finops_output.txt` y la salida de `idempotency_check.py` (ver [Validaciones de la entrega](#validaciones-de-la-entrega)).
+- [ ] Capturas de la UI: Graph view y un run exitoso.
+- [ ] Tests unitarios de `steam_lib` y CI en GitHub Actions.
+- [ ] Decidir el tema del tamaño (399,9 MB vs. 50–300 MB).
+- [ ] Ensayar la defensa con [docs/defense.md](docs/defense.md).
 
 ## Workflow del equipo
 

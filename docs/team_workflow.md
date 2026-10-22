@@ -2,8 +2,9 @@
 
 ## Ramas
 
-- `main`: producción. Protegida: no se puede pushear directo, solo entra por PR desde `develop` con 1 aprobación.
-- `develop`: integración. Los PR de features van acá.
+- `main`: producción. Solo entra por PR desde `develop`.
+  La protección automática está desactivada porque el repo es privado con cuenta gratuita, así que se respeta **por acuerdo**.
+- `develop`: integración y rama por defecto. Los PR de features van acá y los revisa al menos otro integrante antes de mergear.
 - `feature/<tema>`: una por tarea. Ej.: `feature/silver-recommendations`, `feature/finops-validation`.
 
 ```bash
@@ -18,10 +19,14 @@ gh pr create --base develop --fill
 
 - Antes de abrir un PR: el DAG parsea sin errores (`docker compose run --rm airflow-cli airflow dags list-import-errors`).
 - Si cambian una regla de nulos o deduplicación en `steam_lib/silver.py`, actualicen la tabla del README en el mismo PR.
-- Nunca commitear datos (`landing/`, `data/`), el salt ni `.env`. El `.gitignore` ya los excluye.
-- Todos usan el mismo `PII_SALT` (se comparte por fuera del repo) y el mismo dataset (release `dataset-v1`), así los conteos y los hashes coinciden entre máquinas.
+- Nunca commitear datos (`landing/`, `data/`) ni `.env`. El `.gitignore` ya los excluye.
+- **El `PII_SALT` no se escribe en ningún lado del repo** (archivos, commits, issues, PRs). Se pasó por WhatsApp.
+- Todos usan el mismo `PII_SALT` y el mismo dataset (release `dataset-v1`), así los conteos y los hashes coinciden entre máquinas.
+- Si cambian el DAG o `steam_lib`, prueben un mes completo (*Trigger* con `{"month": "2021-03"}`) antes de abrir el PR.
 
 ## Reparto
+
+Completen los nombres.
 
 | Integrante | Área |
 |---|---|

@@ -46,7 +46,7 @@ docker compose build
 docker compose up airflow-init
 
 echo "5/6 Guardando PII_SALT como Airflow Variable (no queda en ningún archivo)..."
-read -rsp "    PII_SALT (es el mismo para todo el equipo): " salt; echo
+read -rsp "    PII_SALT (el que se pasó por el grupo de WhatsApp): " salt; echo
 [[ -n "$salt" ]] || { echo "PII_SALT vacío"; exit 1; }
 docker compose run --rm airflow-cli airflow variables set PII_SALT "$salt" > /dev/null
 
