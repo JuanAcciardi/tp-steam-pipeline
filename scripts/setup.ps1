@@ -3,14 +3,18 @@
 # Es re-ejecutable: lo que ya existe (.env, dataset, usuario de Airflow) no se pisa.
 
 $ErrorActionPreference = "Stop"
-$ProgressPreference = "SilentlyContinue"   # Invoke-WebRequest es muy lento con la barra de progreso
+$ProgressPreference = "SilentlyContinue"   # Expand-Archive es muy lento con la barra de progreso
 $Repo = Split-Path $PSScriptRoot -Parent
 Set-Location $Repo
-$DatasetUrl = "https://github.com/JuanAcciardi/tp-steam-pipeline/releases/download/dataset-v1/steam-landing.zip"
+$RepoSlug = "JuanAcciardi/tp-steam-pipeline"
+$DatasetSha256 = "b4bcce006ada6376c2ab7d64285596f309bf3a47df690cfb3b412ce16855810a"
 
 Write-Host "1/6 Verificando Docker..."
 docker info *> $null
 if ($LASTEXITCODE -ne 0) { throw "Docker no esta corriendo: abri Docker Desktop y volve a ejecutar el script." }
+# El repo es privado: el dataset se baja con gh (autenticado), no con una URL publica.
+gh auth status *> $null
+if ($LASTEXITCODE -ne 0) { throw "Falta gh autenticado: instalar GitHub CLI y correr 'gh auth login'." }
 
 Write-Host "2/6 Generando .env (UID + Fernet key para cifrar las Variables)..."
 if (-not (Test-Path .env)) {
@@ -23,10 +27,13 @@ if (-not (Test-Path .env)) {
 Write-Host "3/6 Descargando el dataset de origen (release dataset-v1)..."
 New-Item -ItemType Directory -Force data, landing, logs | Out-Null
 if (-not (Test-Path landing\_manifest.json)) {
-    $zip = Join-Path $env:TEMP "steam-landing.zip"
-    Invoke-WebRequest $DatasetUrl -OutFile $zip
+    $tmp = Join-Path $env:TEMP "steam-dataset"
+    gh release download dataset-v1 -R $RepoSlug -p steam-landing.zip -D $tmp --clobber
+    if ($LASTEXITCODE -ne 0) { throw "No se pudo descargar el release dataset-v1" }
+    $zip = Join-Path $tmp "steam-landing.zip"
+    if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne $DatasetSha256.ToUpper()) { throw "SHA-256 del dataset no coincide" }
     Expand-Archive $zip -DestinationPath landing -Force
-    Remove-Item $zip
+    Remove-Item $tmp -Recurse
 } else { Write-Host "    landing/ ya tiene el dataset, se conserva." }
 
 Write-Host "4/6 Construyendo la imagen e inicializando Airflow..."

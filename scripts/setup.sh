@@ -5,10 +5,13 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-DATASET_URL="https://github.com/JuanAcciardi/tp-steam-pipeline/releases/download/dataset-v1/steam-landing.zip"
+REPO_SLUG="JuanAcciardi/tp-steam-pipeline"
+DATASET_SHA256="b4bcce006ada6376c2ab7d64285596f309bf3a47df690cfb3b412ce16855810a"
 
 echo "1/6 Verificando Docker..."
 docker info > /dev/null 2>&1 || { echo "Docker no está corriendo."; exit 1; }
+# El repo es privado: el dataset se baja con gh (autenticado), no con una URL pública.
+gh auth status > /dev/null 2>&1 || { echo "Falta gh autenticado: instalar GitHub CLI y correr 'gh auth login'."; exit 1; }
 
 echo "2/6 Generando .env (UID + Fernet key para cifrar las Variables)..."
 if [[ ! -f .env ]]; then
@@ -22,7 +25,12 @@ echo "3/6 Descargando el dataset de origen (release dataset-v1)..."
 mkdir -p data landing logs
 if [[ ! -f landing/_manifest.json ]]; then
   tmp=$(mktemp -d)
-  curl -fL "$DATASET_URL" -o "$tmp/steam-landing.zip"
+  gh release download dataset-v1 -R "$REPO_SLUG" -p steam-landing.zip -D "$tmp"
+  if command -v sha256sum > /dev/null; then
+    echo "$DATASET_SHA256  $tmp/steam-landing.zip" | sha256sum -c --quiet
+  else
+    echo "$DATASET_SHA256  $tmp/steam-landing.zip" | shasum -a 256 -c --quiet
+  fi
   if command -v unzip > /dev/null; then
     unzip -q "$tmp/steam-landing.zip" -d landing
   else
