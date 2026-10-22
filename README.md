@@ -23,7 +23,7 @@ data/     (no versionado)  bronze / silver / gold / catalog.duckdb
 
 ## Setup (una vez por integrante)
 
-Requisitos: Docker Desktop (o Docker Engine) y git.
+Requisitos: Docker Desktop (o Docker Engine), git y [GitHub CLI](https://cli.github.com/) autenticado (`gh auth login`): el repo es privado y el dataset se descarga del release con `gh`.
 
 ```powershell
 git clone https://github.com/JuanAcciardi/tp-steam-pipeline.git
@@ -35,7 +35,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1     # Windows
 El script hace todo, y se puede volver a correr sin pisar lo que ya existe:
 
 1. Genera `.env` con una Fernet key propia, que cifra las Variables en la metadata DB.
-2. Descarga el dataset de origen desde el release [`dataset-v1`](https://github.com/JuanAcciardi/tp-steam-pipeline/releases/tag/dataset-v1) a `landing/`.
+2. Descarga el dataset de origen (y verifica su SHA-256) desde el release [`dataset-v1`](https://github.com/JuanAcciardi/tp-steam-pipeline/releases/tag/dataset-v1) a `landing/`.
 3. Construye la imagen e inicializa Airflow.
 4. Pide el `PII_SALT` y lo guarda con `airflow variables set PII_SALT ...`. Es el mismo para todo el equipo y se comparte por fuera del repo.
 5. Levanta Airflow en http://localhost:8080 (usuario `airflow`, clave `airflow`).
