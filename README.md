@@ -35,7 +35,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1     # Windows
 El script hace todo, y se puede volver a correr sin pisar lo que ya existe:
 
 1. Genera `.env` con una Fernet key propia, que cifra las Variables en la metadata DB.
-2. Descarga el dataset de origen (y verifica su SHA-256) desde el release [`dataset-v1`](https://github.com/JuanAcciardi/tp-steam-pipeline/releases/tag/dataset-v1) a `landing/`.
+2. Descarga el dataset de origen (y verifica su SHA-256) desde el release [`dataset-v1`](https://github.com/JuanAcciardi/tp-steam-pipeline/releases/tag/dataset-v1) (zip de 146 MB) y lo descomprime en `landing/` (399,9 MB).
 3. Construye la imagen e inicializa Airflow.
 4. Pide el `PII_SALT` y lo guarda con `airflow variables set PII_SALT ...`. Es el mismo para todo el equipo y se comparte por fuera del repo.
 5. Levanta Airflow en http://localhost:8080 (usuario `airflow`, clave `airflow`).
@@ -64,6 +64,9 @@ el punto de partida del TP.
 | games | snapshot completo del catálogo | 50.872 | 4,7 |
 | games_metadata | snapshot completo (JSON lines) | 50.872 | 17,3 |
 | **Total** | | | **399,9** |
+
+> El release se descarga como `steam-landing.zip`, que pesa **146 MB comprimido**. Al descomprimirlo en
+> `landing/` ocupa los **399,9 MB** de la tabla: el pipeline trabaja siempre sobre los CSV/JSON descomprimidos.
 
 El dataset publicado en Kaggle ya viene limpio. Con la conformidad de la cátedra, el origen
 del TP incluye **problemas de calidad típicos de un sistema real**, para mostrar la limpieza en acción:
