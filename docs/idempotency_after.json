@@ -1,0 +1,54 @@
+{
+  "month": "2021-03",
+  "silver_recommendations": {
+    "path": "/opt/airflow/data/silver/recommendations/part-2021-03.parquet",
+    "files": [
+      "part-2021-03.parquet"
+    ],
+    "rows": 53607,
+    "sha256": [
+      "f87c2a46ff5301ca"
+    ]
+  },
+  "silver_quarantine": {
+    "path": "/opt/airflow/data/silver/_quarantine/recommendations/part-2021-03.parquet",
+    "files": [
+      "part-2021-03.parquet"
+    ],
+    "rows": 89,
+    "sha256": [
+      "3a1dd59793913f3e"
+    ]
+  },
+  "silver_users": {
+    "path": "/opt/airflow/data/silver/users/part-2021-03.parquet",
+    "files": [
+      "part-2021-03.parquet"
+    ],
+    "rows": 21385,
+    "sha256": [
+      "4e25d49e51d5d2e5"
+    ]
+  },
+  "silver_user_profiles": {
+    "path": "/opt/airflow/data/silver/user_profiles/part-2021-03.parquet",
+    "files": [
+      "part-2021-03.parquet"
+    ],
+    "rows": 21403,
+    "sha256": [
+      "9b9758bedb7b26da"
+    ]
+  },
+  "gold_partition": {
+    "path": "/opt/airflow/data/gold/user_game_reviews/year=2021/month=03",
+    "files": [
+      "part-0.parquet"
+    ],
+    "rows": 53607,
+    "sha256": [
+      "a09c399a90550978"
+    ]
+  },
+  "gold_total_files": 36
+}

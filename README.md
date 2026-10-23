@@ -271,16 +271,32 @@ extracción futura con otros problemas no rompa el pipeline ni contamine Gold.
 
 ## Validaciones de la entrega
 
+Las evidencias se generaron dentro de Airflow (Docker, versiones fijadas de `requirements.txt`) el
+23/10/2026, después del backfill completo: **36 runs programados en `success`, 0 fallidos**.
+
+| Evidencia | Resultado | Archivos |
+|---|---|---|
+| Backfill y DAG | 36/36 runs `scheduled` en `success`; Graph view con los 9 tasks; detalle de un run con todas las tasks en `success` | [`airflow_graph.jpeg`](docs/airflow_graph.jpeg), [`airflow_run_detail.jpeg`](docs/airflow_run_detail.jpeg) |
+| Idempotencia (2021-03) | Re-ejecución desde el scheduler con *Clear* del run `scheduled__2021-03-01` (2° intento de cada task). Silver, cuarentena, Gold y cantidad de archivos idénticos (53.607 reviews en Silver y Gold, 89 en cuarentena) y **mismos SHA-256** de cada Parquet antes y después | [`idempotency_before.json`](docs/idempotency_before.json), [`idempotency_after.json`](docs/idempotency_after.json), [`idempotency_compare.txt`](docs/idempotency_compare.txt) |
+| FinOps (DuckDB `EXPLAIN ANALYZE`) | Full scan: 36 Parquet, 2.173.455 filas. Pruned (`year=2021, month=03`): 1 de 36 Parquet, 53.607 filas (**−97,5%**) | [`finops_output.txt`](docs/finops_output.txt) |
+
+Cómo se generaron (desde la raíz del repo, con el DAG despausado y el backfill terminado):
+
 ```bash
-docker compose exec airflow-scheduler python scripts/finops_validation.py --out docs/finops_output.txt
-docker compose exec airflow-scheduler python scripts/idempotency_check.py snapshot --month 2021-03 --out docs/idempotency_before.json
-# Clear del run 2021-03 en la UI (o trigger con params {"month": "2021-03"})
-docker compose exec airflow-scheduler python scripts/idempotency_check.py compare --month 2021-03 --baseline docs/idempotency_before.json
+docker compose exec -T airflow-scheduler python scripts/idempotency_check.py snapshot --month 2021-03 --out docs/idempotency_before.json
+docker compose run --rm airflow-cli airflow tasks clear steam_medallion_pipeline --start-date 2021-03-01 --end-date 2021-03-01 --yes   # o Clear Run en la UI
+# esperar a que el run 2021-03 vuelva a success
+docker compose exec -T airflow-scheduler python scripts/idempotency_check.py compare --month 2021-03 --baseline docs/idempotency_before.json | tee docs/idempotency_compare.txt
+docker compose exec -T airflow-scheduler python scripts/idempotency_check.py snapshot --month 2021-03 --out docs/idempotency_after.json
+diff docs/idempotency_before.json docs/idempotency_after.json && echo "Snapshots idénticos"
+docker compose exec -T airflow-scheduler python scripts/finops_validation.py --year 2021 --month 03 --out docs/finops_output.txt
 ```
+
+> Para repetir la prueba (por ejemplo en la defensa) sin pisar estas evidencias, usen `--out /tmp/...`.
 
 ## Estado del TP
 
-Actualizado al 22/10/2026.
+Actualizado al 23/10/2026.
 
 | Requisito de la consigna | Estado |
 |---|---|
@@ -291,18 +307,20 @@ Actualizado al 22/10/2026.
 | PII con SHA-256 + salt, salt en Airflow Variable leída dentro del task | ✅ HMAC-SHA256, `Variable.get` dentro de `mask_pii` |
 | Gold con ≥4 entidades y particionado Hive | ✅ 5 entidades |
 | DAG con ≥5 tasks y `>>` | ✅ 9 tasks |
-| Idempotencia (overwrite de particiones) | ✅ implementada; validada sin Airflow (re-run de un mes → conteos idénticos) |
-| DuckDB EXPLAIN ANALYZE full vs. pruned | ✅ script listo; validado sin Airflow (36 → 1 Parquet, −95% de filas) |
+| Backfill dentro de Airflow | ✅ 36/36 runs programados en `success` (ver [Validaciones de la entrega](#validaciones-de-la-entrega)) |
+| Idempotencia (overwrite de particiones) | ✅ re-ejecución de 2021-03 desde el scheduler: conteos y SHA-256 idénticos ([`idempotency_compare.txt`](docs/idempotency_compare.txt)) |
+| DuckDB EXPLAIN ANALYZE full vs. pruned | ✅ 36 → 1 Parquet, 2.173.455 → 53.607 filas (−97,5%) ([`finops_output.txt`](docs/finops_output.txt)) |
 | Repo con `/dags`, `/scripts`, `/sql`, `/docs` y `.gitignore` | ✅ |
 | Ramas `main` / `develop` / `feature/*` con PRs | ✅ en uso. ⚠️ La protección automática de `main` no está activa (repo privado + cuenta gratuita); se activa con GitHub Education/Pro. Mientras tanto, **nadie pushea directo a `main` ni a `develop`** |
 
 ### Próximos pasos
 
-- [ ] Correr el backfill completo **dentro de Airflow** y revisar los logs de cada task.
-- [ ] Generar las evidencias de la entrega y commitearlas en `docs/`: `finops_output.txt` y la salida de `idempotency_check.py` (ver [Validaciones de la entrega](#validaciones-de-la-entrega)).
-- [ ] Capturas de la UI: Graph view y un run exitoso.
+- [x] Correr el backfill completo **dentro de Airflow** (36/36 en `success`).
+- [x] Generar las evidencias de la entrega y commitearlas en `docs/` (ver [Validaciones de la entrega](#validaciones-de-la-entrega)).
+- [x] Capturas de la UI: Graph view y un run exitoso.
+- [ ] Publicar el release `dataset-v2` (el PR de esta rama queda en draft hasta entonces).
 - [ ] Tests unitarios de `steam_lib` y CI en GitHub Actions.
-- [x] Bajar el dataset a ≤ 300 MB (`dataset-v2`, 272,5 MB). Falta publicar el release.
+- [x] Bajar el dataset a ≤ 300 MB (`dataset-v2`, 272,5 MB).
 - [ ] Ensayar la defensa con [docs/defense.md](docs/defense.md).
 
 ## Workflow del equipo

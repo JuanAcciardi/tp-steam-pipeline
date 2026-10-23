@@ -10,11 +10,14 @@ levantado, backfill completo y una terminal con el repo abierta.
    con las estadísticas de limpieza: duplicados, nulos descartados, cuarentena.
 3. Test de idempotencia:
    ```bash
-   docker compose exec airflow-scheduler python scripts/idempotency_check.py snapshot --month 2021-03 --out docs/idempotency_before.json
-   # UI: run 2021-03 -> Clear -> esperar a que termine
-   docker compose exec airflow-scheduler python scripts/idempotency_check.py compare --month 2021-03 --baseline docs/idempotency_before.json
+   # En /tmp del contenedor, para no pisar las evidencias commiteadas en docs/.
+   docker compose exec airflow-scheduler python scripts/idempotency_check.py snapshot --month 2021-03 --out /tmp/idempotency_demo.json
+   # UI: run 2021-03 -> Clear Run -> esperar a que termine
+   docker compose exec airflow-scheduler python scripts/idempotency_check.py compare --month 2021-03 --baseline /tmp/idempotency_demo.json
    ```
-4. FinOps: `docker compose exec airflow-scheduler python scripts/finops_validation.py`.
+   Evidencia ya generada: `docs/idempotency_compare.txt` (y los snapshots `idempotency_before/after.json`, con SHA-256 idénticos).
+4. FinOps: `docker compose exec airflow-scheduler python scripts/finops_validation.py --year 2021 --month 03` (sin `--out`,
+   para no pisar `docs/finops_output.txt`).
 
 ## Idempotencia
 
@@ -22,7 +25,8 @@ levantado, backfill completo y una terminal con el repo abierta.
 `bronze/{recommendations,users,user_profiles}/ingested_year=2021/ingested_month=04/`,
 `silver/*/part-2021-03.parquet` y `gold/user_game_reviews/year=2021/month=03/`. El catálogo de Bronze
 no se toca si no cambió: el run reusa el último snapshot con partición ≤ 2021-04. Los conteos quedan iguales; `idempotency_check.py`
-compara filas y archivos de cada capa.
+compara filas y archivos de cada capa. En la re-ejecución real de 2021-03 (Clear desde la UI/scheduler)
+también coincidieron los SHA-256 de cada Parquet: ver `docs/idempotency_before.json` / `idempotency_after.json`.
 
 **Código que lo garantiza:** `steam_lib/io_utils.py`
 - `write_partition()`: escribe en `data/_tmp/<uuid>`, hace `rmtree` de la partición y
@@ -62,7 +66,8 @@ vez. Como escribimos en un temporal, un fallo a mitad de camino deja la versión
 ## Particionado y performance
 
 - **Clave:** año/mes de `review_date`. Ver la justificación en `docs/architecture.md`.
-- **Evidencia:** el full scan lee 36 Parquet; el pruned lee 1, con un ~95% menos de filas.
+- **Evidencia** (`docs/finops_output.txt`): el full scan lee 36 Parquet y 2.173.455 filas; el pruned
+  (`year=2021, month=03`) lee 1 de 36 Parquet y 53.607 filas, un 97,5% menos.
 - **Fecha de ingesta vs. fecha de negocio:** Bronze se particiona por cuándo llegó el archivo
   (linaje y auditoría: "¿qué recibimos en abril?"). Gold se particiona por cuándo ocurrió la
   review (análisis: "¿qué pasó en marzo?"). Las reviews de marzo están en
