@@ -6,7 +6,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 REPO_SLUG="JuanAcciardi/tp-steam-pipeline"
-DATASET_SHA256="b4bcce006ada6376c2ab7d64285596f309bf3a47df690cfb3b412ce16855810a"
+DATASET_SHA256="e46e3b55529dbaa533e9c7708b7070bcebb08451a0d626fe228d13bc9f082daa"
 
 echo "1/6 Verificando Docker..."
 docker info > /dev/null 2>&1 || { echo "Docker no está corriendo."; exit 1; }
@@ -21,11 +21,16 @@ else
   echo "    .env ya existe, se conserva."
 fi
 
-echo "3/6 Descargando el dataset de origen (release dataset-v1)..."
+echo "3/6 Descargando el dataset de origen (release dataset-v2)..."
 mkdir -p data landing logs
-if [[ ! -f landing/_manifest.json ]]; then
+# Si landing/ tiene otra versión del dataset (por ejemplo la v1), se reemplaza por la v2.
+if ! grep -q '"dataset": "dataset-v2"' landing/_manifest.json 2> /dev/null; then
+  if [[ -f landing/_manifest.json ]]; then
+    echo "    landing/ tiene otra versión del dataset: se reemplaza por dataset-v2."
+    rm -rf landing && mkdir landing
+  fi
   tmp=$(mktemp -d)
-  gh release download dataset-v1 -R "$REPO_SLUG" -p steam-landing.zip -D "$tmp"
+  gh release download dataset-v2 -R "$REPO_SLUG" -p steam-landing.zip -D "$tmp"
   if command -v sha256sum > /dev/null; then
     echo "$DATASET_SHA256  $tmp/steam-landing.zip" | sha256sum -c --quiet
   else
@@ -38,7 +43,7 @@ if [[ ! -f landing/_manifest.json ]]; then
   fi
   rm -rf "$tmp"
 else
-  echo "    landing/ ya tiene el dataset, se conserva."
+  echo "    landing/ ya tiene el dataset-v2, se conserva."
 fi
 
 echo "4/6 Construyendo la imagen e inicializando Airflow..."

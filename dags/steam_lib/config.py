@@ -11,7 +11,7 @@ from pathlib import Path
 
 AIRFLOW_HOME = Path(os.environ.get("AIRFLOW_HOME", "~/airflow")).expanduser()
 
-# Sistema origen: dataset fuente publicado en el release dataset-v1 del repo. No es parte del medallion.
+# Sistema origen: dataset fuente publicado en el release dataset-v2 del repo. No es parte del medallion.
 LANDING_ROOT = Path(os.environ.get("STEAM_LANDING_ROOT", AIRFLOW_HOME / "landing")).expanduser()
 
 # Capas medallion exigidas por la consigna.

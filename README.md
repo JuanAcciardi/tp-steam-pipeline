@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1     # Windows
 El script hace todo, y se puede volver a correr sin pisar lo que ya existe:
 
 1. Genera `.env` con una Fernet key propia, que cifra las Variables en la metadata DB.
-2. Descarga el dataset de origen (y verifica su SHA-256) desde el release [`dataset-v1`](https://github.com/JuanAcciardi/tp-steam-pipeline/releases/tag/dataset-v1) (zip de 146 MB) y lo descomprime en `landing/` (399,9 MB).
+2. Descarga el dataset de origen (y verifica su SHA-256) desde el release [`dataset-v2`](https://github.com/JuanAcciardi/tp-steam-pipeline/releases/tag/dataset-v2) (zip de 93,6 MB) y lo descomprime en `landing/` (272,5 MB). Si `landing/` tiene otra versión (por ejemplo la v1), la reemplaza.
 3. Construye la imagen e inicializa Airflow.
 4. Pide el `PII_SALT` (el del grupo de WhatsApp) y lo guarda con `airflow variables set PII_SALT ...`.
    No se escribe en ningún archivo. Tiene que ser el mismo para los 5, así los hashes coinciden.
@@ -88,25 +88,26 @@ CLI de Airflow: `docker compose run --rm airflow-cli airflow <comando>`.
 ## Dataset de origen
 
 Se deriva de [Game Recommendations on Steam](https://www.kaggle.com/datasets/antonkozyriev/game-recommendations-on-steam)
-(41,2M reviews, 2010-10 → 2022-12). Es una muestra determinística del **13,4% de los usuarios**
+(41,2M reviews, 2010-10 → 2022-12). Es una muestra determinística del **8,44% de los usuarios**
 con todas sus reviews de los **últimos 3 años disponibles (2020-01 → 2022-12)**, más una tabla
-de identidad sintética (PII) por usuario. Se publica una sola vez en el release `dataset-v1` y es
+de identidad sintética (PII) por usuario. Se publica en el release `dataset-v2` y es
 el punto de partida del TP.
 
-| Tabla (landing) | Entrega | Filas | MB |
-|---|---|---|---|
-| recommendations | 1 CSV por mes de negocio (36) | 3.467.515 | 234,5 |
-| users | 1 CSV por mes (altas: usuarios con su 1ª review en ese mes) | 1.415.203 | 18,3 |
-| user_profiles (PII) | 1 CSV por mes, misma cohorte que users | 1.415.203 | 125,1 |
-| games | snapshot completo del catálogo | 50.872 | 4,7 |
-| games_metadata | snapshot completo (JSON lines) | 50.872 | 17,3 |
-| **Total** | | | **399,9** |
+| Tabla (landing) | Entrega | Filas | MB | MiB |
+|---|---|---|---|---|
+| recommendations | 1 CSV por mes de negocio (36) | 2.236.648 | 154,7 | 147,6 |
+| users | 1 CSV por mes (altas: usuarios con su 1ª review en ese mes) | 900.098 | 12,1 | 11,5 |
+| user_profiles (PII) | 1 CSV por mes, misma cohorte que users | 895.585 | 82,6 | 78,8 |
+| games | snapshot completo del catálogo | 51.380 | 4,9 | 4,7 |
+| games_metadata | snapshot completo (JSON lines) | 51.126 | 18,2 | 17,3 |
+| **Total** | | | **272,5** | **259,9** |
 
-> El release se descarga como `steam-landing.zip`, que pesa **146 MB comprimido**. Al descomprimirlo en
-> `landing/` ocupa los **399,9 MB** de la tabla: el pipeline trabaja siempre sobre los CSV/JSON descomprimidos.
+> Las filas son las de los archivos, con los duplicados sucios incluidos. MB = 10⁶ bytes, MiB = 2²⁰ bytes.
+> El release se descarga como `steam-landing.zip`, que pesa **93,6 MB comprimido**. Al descomprimirlo en
+> `landing/` ocupa los **272,5 MB** de la tabla: el pipeline trabaja siempre sobre los CSV/JSON descomprimidos.
 
 > **PII:** `user_profiles` es 100% sintética. No se commitea (`*.csv` y `user_profiles*.csv` están en el
-> `.gitignore`) y solo se distribuye dentro del release `dataset-v1` de este repo privado.
+> `.gitignore`) y solo se distribuye dentro del release `dataset-v2` de este repo privado.
 
 El dataset publicado en Kaggle ya viene limpio. Con la conformidad de la cátedra, el origen
 del TP incluye **problemas de calidad típicos de un sistema real**, para mostrar la limpieza en acción:
@@ -118,6 +119,26 @@ del TP incluye **problemas de calidad típicos de un sistema real**, para mostra
 | games_metadata | descripciones en blanco, tags en mayúscula, versiones viejas duplicadas |
 | users | `user_id` o `reviews` vacíos, duplicados exactos |
 | user_profiles | emails con mayúsculas/espacios o vacíos, país en minúscula, duplicados |
+
+### Cómo se redujo el dataset (v1 → v2)
+
+El primer release (`dataset-v1`, 13,4% de los usuarios) pesaba 419,3 MB (399,9 MiB) y la consigna
+pide como máximo 300 MB. El `dataset-v2` se arma a partir del v1 con
+[`scripts/downsample_v2.py`](scripts/downsample_v2.py):
+
+```bash
+python3 scripts/downsample_v2.py --src landing --out datasets/landing-v2 --zip datasets/steam-landing.zip   # landing/ con el v1
+```
+
+- **Muestreo por usuario, determinístico:** un usuario queda si `sha256("steam-tp-v2:" + user_id)` cae en
+  el 63% del rango. No usa `PII_SALT` ni nada aleatorio: correrlo dos veces da el mismo zip (mismo SHA-256).
+- **Se mantienen los 36 meses**, para que la demostración de partition pruning siga siendo 36 → 1.
+- **Cada usuario elegido conserva todas sus reviews y su perfil.** El script falla si aparece algún
+  huérfano nuevo. Los únicos que quedan son los que ya traía el origen: perfiles y reviews cuyo
+  registro en `users` tiene el `user_id` vacío (problema de calidad intencional; 1.374 usuarios en v1, 888 en v2).
+- **Los registros se copian byte a byte**, así que los problemas de calidad se mantienen en la misma
+  proporción (el script imprime la comparación antes/después; por ejemplo, reviews editadas 2,18% → 2,18%,
+  fechas `DD/MM/YYYY` 5,0% → 5,0%, emails con mayúsculas/espacios 9,90% → 9,88%). `games` y `games_metadata` no cambian.
 
 ## Diseño
 
@@ -223,8 +244,8 @@ Actualizado al 22/10/2026.
 
 | Requisito de la consigna | Estado |
 |---|---|
-| Dataset ≥3 tablas, fecha nativa, PII sintética, datos sucios | ✅ release `dataset-v1` (5 tablas, 2020-01 → 2022-12) |
-| Tamaño 50–300 MB | ⚠️ son 399,9 MB descomprimidos. Decisión del equipo: hay que justificarla en la defensa o bajar la muestra |
+| Dataset ≥3 tablas, fecha nativa, PII sintética, datos sucios | ✅ release `dataset-v2` (5 tablas, 2020-01 → 2022-12) |
+| Tamaño 50–300 MB | ✅ 272,5 MB (259,9 MiB) descomprimidos con `dataset-v2` (ver [Cómo se redujo el dataset](#cómo-se-redujo-el-dataset-v1--v2)) |
 | Estructura `bronze/{table}/ingested_year=/ingested_month=`, `silver/{table}`, `gold/{dataset}/year=/month=` | ✅ implementada |
 | Silver con pandas + pyarrow en `@task`, dedup, tipado, nulos documentados | ✅ implementado y documentado en este README |
 | PII con SHA-256 + salt, salt en Airflow Variable leída dentro del task | ✅ HMAC-SHA256, `Variable.get` dentro de `mask_pii` |
@@ -241,7 +262,7 @@ Actualizado al 22/10/2026.
 - [ ] Generar las evidencias de la entrega y commitearlas en `docs/`: `finops_output.txt` y la salida de `idempotency_check.py` (ver [Validaciones de la entrega](#validaciones-de-la-entrega)).
 - [ ] Capturas de la UI: Graph view y un run exitoso.
 - [ ] Tests unitarios de `steam_lib` y CI en GitHub Actions.
-- [ ] Decidir el tema del tamaño (399,9 MB vs. 50–300 MB).
+- [x] Bajar el dataset a ≤ 300 MB (`dataset-v2`, 272,5 MB). Falta publicar el release.
 - [ ] Ensayar la defensa con [docs/defense.md](docs/defense.md).
 
 ## Workflow del equipo

@@ -21,7 +21,7 @@ gh pr create --base develop --fill
 - Si cambian una regla de nulos o deduplicación en `steam_lib/silver.py`, actualicen la tabla del README en el mismo PR.
 - Nunca commitear datos (`landing/`, `data/`) ni `.env`. El `.gitignore` ya los excluye.
 - **El `PII_SALT` no se escribe en ningún lado del repo** (archivos, commits, issues, PRs). Se pasó por WhatsApp.
-- Todos usan el mismo `PII_SALT` y el mismo dataset (release `dataset-v1`), así los conteos y los hashes coinciden entre máquinas.
+- Todos usan el mismo `PII_SALT` y el mismo dataset (release `dataset-v2`), así los conteos y los hashes coinciden entre máquinas.
 - Si cambian el DAG o `steam_lib`, prueben un mes completo (*Trigger* con `{"month": "2021-03"}`) antes de abrir el PR.
 
 ## Reparto
