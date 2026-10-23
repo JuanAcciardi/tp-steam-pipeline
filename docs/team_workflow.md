@@ -22,7 +22,7 @@ gh pr create --base develop --fill
 - Nunca commitear datos (`landing/`, `data/`) ni `.env`. El `.gitignore` ya los excluye.
 - **El `PII_SALT` no se escribe en ningún lado del repo** (archivos, commits, issues, PRs). Se pasó por WhatsApp.
 - Todos usan el mismo `PII_SALT` y el mismo dataset (release `dataset-v2`), así los conteos y los hashes coinciden entre máquinas.
-- Si cambian el DAG o `steam_lib`, prueben un mes completo (*Trigger* con `{"month": "2021-03"}`) antes de abrir el PR.
+- Si cambian el DAG o `steam_lib`, prueben un mes completo antes de abrir el PR: `airflow dags test steam_medallion_pipeline 2021-03-15 -c '{"month": "2021-03"}'` (ver README, *Correr el pipeline*). Si usan *Trigger* con el DAG pausado, destilden "Unpause on trigger".
 
 ## Reparto
 

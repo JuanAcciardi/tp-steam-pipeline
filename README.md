@@ -63,6 +63,14 @@ CLI de Airflow: `docker compose run --rm airflow-cli airflow <comando>`.
 - **Backfill completo:** en la UI, activar (unpause) `steam_medallion_pipeline`. Airflow crea un
   run por mes, de 2020-01 a 2022-12 (36 runs), y los ejecuta en orden, de a uno.
 - **Un mes puntual:** *Trigger DAG* con params `{"month": "2021-03"}`, o *Clear* sobre un run existente.
+  Sin `month`, un trigger manual procesa el mes anterior a la fecha del trigger, que no está en el dataset, y se saltea.
+  ⚠️ Si el DAG está pausado, el diálogo de *Trigger* trae tildado **"Unpause … on trigger"**: si no lo
+  destildan, se despausa y, por `catchup=True`, arranca el backfill de los 36 meses.
+- **Probar un mes sin despausar** (queda registrado en la base y se ve en la UI):
+  ```bash
+  docker compose run --rm airflow-cli airflow dags test steam_medallion_pipeline 2020-01-15 -c '{"month": "2020-01"}'
+  ```
+  Hay que pasar `month`: con solo la fecha, Airflow infiere el intervalo del mes *anterior* (2019-12).
 - **Ver el resultado:** las capas quedan en `data/`. Para consultar Gold con DuckDB:
   ```bash
   docker compose exec airflow-scheduler python -c "import duckdb; print(duckdb.connect('data/catalog.duckdb').sql('SELECT year, month, COUNT(*) FROM user_game_reviews GROUP BY ALL ORDER BY ALL'))"
