@@ -22,6 +22,9 @@ x-airflow-common:
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: '30'
+    # steam_lib vive en dags/. El dag-processor y los tasks agregan esa carpeta al sys.path,
+    # pero el CLI (airflow dags test) no: sin esto falla con "No module named 'steam_lib'".
+    PYTHONPATH: /opt/airflow/dags
   volumes:
     - ./dags:/opt/airflow/dags
     - ./scripts:/opt/airflow/scripts

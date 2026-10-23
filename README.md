@@ -85,7 +85,8 @@ CLI de Airflow: `docker compose run --rm airflow-cli airflow <comando>`.
 | Docker se cae o el disco C: se llena | Docker Desktop → Settings → Resources → Advanced → *Disk image location* → elegí otro disco → *Apply & restart*. |
 | `Falta gh autenticado` | `gh auth login`, y verificá que aceptaste la invitación al repo. |
 | `Falta AIRFLOW_FERNET_KEY en .env` | Corré el script de setup (genera `.env`). No copies el `.env` de otro integrante. |
-| El DAG no aparece o muestra *Import error* | `docker compose run --rm airflow-cli airflow dags list-import-errors` |
+| El DAG no aparece o muestra *Import error* | `docker compose run --rm airflow-cli airflow dags list-import-errors` (lee los errores que guardó el dag-processor en la base; con `--local` parsea en el contenedor del CLI) |
+| En *Health* el Triggerer aparece en rojo | Es esperable: el compose no levanta triggerer porque el DAG no usa operadores *deferrable*. No afecta al TP. |
 | `mask_pii` falla con `PII_SALT vacío` | `docker compose run --rm airflow-cli airflow variables set PII_SALT '<el del WhatsApp>'` |
 
 > La consigna propone `airflow standalone` en WSL. Usamos Docker Compose con la misma versión
