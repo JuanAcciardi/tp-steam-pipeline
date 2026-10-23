@@ -105,6 +105,9 @@ el punto de partida del TP.
 > El release se descarga como `steam-landing.zip`, que pesa **146 MB comprimido**. Al descomprimirlo en
 > `landing/` ocupa los **399,9 MB** de la tabla: el pipeline trabaja siempre sobre los CSV/JSON descomprimidos.
 
+> **PII:** `user_profiles` es 100% sintética. No se commitea (`*.csv` y `user_profiles*.csv` están en el
+> `.gitignore`) y solo se distribuye dentro del release `dataset-v1` de este repo privado.
+
 El dataset publicado en Kaggle ya viene limpio. Con la conformidad de la cátedra, el origen
 del TP incluye **problemas de calidad típicos de un sistema real**, para mostrar la limpieza en acción:
 
