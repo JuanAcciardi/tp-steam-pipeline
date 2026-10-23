@@ -19,8 +19,9 @@ levantado, backfill completo y una terminal con el repo abierta.
 ## Idempotencia
 
 **¿Qué pasa al re-ejecutar un mes?** Se reescriben exactamente los mismos archivos:
-`bronze/*/ingested_year=2021/ingested_month=04/`, `silver/*/part-2021-03.parquet` y
-`gold/user_game_reviews/year=2021/month=03/`. Los conteos quedan iguales; `idempotency_check.py`
+`bronze/{recommendations,users,user_profiles}/ingested_year=2021/ingested_month=04/`,
+`silver/*/part-2021-03.parquet` y `gold/user_game_reviews/year=2021/month=03/`. El catálogo de Bronze
+no se toca si no cambió: el run reusa el último snapshot con partición ≤ 2021-04. Los conteos quedan iguales; `idempotency_check.py`
 compara filas y archivos de cada capa.
 
 **Código que lo garantiza:** `steam_lib/io_utils.py`

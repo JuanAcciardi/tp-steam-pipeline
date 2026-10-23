@@ -148,10 +148,33 @@ python3 scripts/downsample_v2.py --src landing --out datasets/landing-v2 --zip d
 | Fecha de ingesta | El origen entrega la extracción del mes M el 1° de M+1 (= `data_interval_end`). Particiona Bronze. Ej.: reviews de 2021-03 → `bronze/recommendations/ingested_year=2021/ingested_month=04/`. |
 | Granularidad | Un DAG run = un mes de negocio (`CronDataIntervalTimetable` mensual, `catchup=True`, `max_active_runs=1`). El param `month` (YYYY-MM) permite forzar un mes en un trigger manual. |
 | Tablas incrementales | `recommendations`, `users`, `user_profiles`. |
-| Tablas snapshot | `games`, `games_metadata`. |
+| Tablas snapshot | `games`, `games_metadata`. Bronze guarda una versión nueva solo cuando el origen entrega un catálogo distinto (ver [Bronze y los snapshots](#bronze-y-los-snapshots)). |
 | Gold | `gold/user_game_reviews/year=YYYY/month=MM/`. Grano: 1 fila por review. Joins N:1 de 5 entidades Silver: recommendations ⨝ games ⨝ games_metadata ⨝ users ⨝ user_profiles. |
 
 Más detalle en [docs/architecture.md](docs/architecture.md).
+
+### Bronze y los snapshots
+
+**Bronze registra cada versión que entrega el origen.** Las tablas incrementales se copian en cada
+run. `games` y `games_metadata` llegan completas en cada extracción, así que copiarlas en los 36 runs
+dejaría 36 copias idénticas (~830 MB). En cambio, `land_raw_files` compara el SHA-256 del archivo
+de `landing/` contra el **último snapshot de Bronze con partición ≤ al mes de ingesta del run**:
+
+- si es igual, no copia nada y el run usa ese snapshot;
+- si es distinto, o no hay ninguno ≤ al mes del run, lo copia byte a byte en
+  `bronze/{table}/ingested_year=YYYY/ingested_month=MM/` del run.
+
+La comparación es contra el último ≤ al mes del run, y no contra el último en general, para que un
+mes viejo re-ejecutado después de uno más nuevo (o un backfill fuera de orden) lea el catálogo que
+correspondía a su ingesta. Si `validate_bronze` o Silver no encuentran ningún snapshot ≤ al mes del
+run, fallan con un mensaje explícito. Con el dataset actual queda una sola copia, en
+`ingested_year=2020/ingested_month=02/`, y Bronze ocupa 260 MB en lugar de ~1,1 GB.
+
+**Por qué no hardlinks:** con hardlinks cada partición mensual tendría el archivo sin ocupar disco extra,
+pero `landing/` y `data/` son montajes separados en Docker y `os.link` no funciona entre montajes
+(error `EXDEV`). Además, un hardlink comparte el inodo con el origen: si el origen reescribe el
+archivo en el lugar, cambia también lo que hay en Bronze, y Bronze deja de ser una copia fiel de lo
+que se recibió.
 
 ### DAG
 
@@ -166,6 +189,7 @@ build_gold_partition >> update_duckdb_catalog >> audit_counts
 
 - Todas las rutas se derivan de la ventana del run, nunca de `now()`.
 - **Bronze y Gold:** la carpeta de la partición se arma en `data/_tmp/` y reemplaza completa a la anterior (`rmtree` + `os.replace`). Nunca se hace append.
+- **Snapshots de Bronze:** si el catálogo no cambió respecto del último snapshot ≤ al mes, el re-run no escribe nada; si cambió, reescribe la partición de su propio mes de ingesta.
 - **Silver:** un archivo por mes (`part-YYYY-MM.parquet`) o por snapshot, reemplazado de forma atómica.
 - `audit_counts` falla si Gold ≠ Silver (no hay fan-out en los joins) y deja `data/_audit/YYYY-MM.json`.
 - La evidencia se genera con `scripts/idempotency_check.py` (snapshot → re-run → compare).

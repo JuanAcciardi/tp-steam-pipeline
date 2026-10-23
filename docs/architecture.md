@@ -40,6 +40,9 @@ landing/
   `bronze/{table}/ingested_year=YYYY/ingested_month=MM/`.
 - La fecha de ingesta es el mes siguiente al de negocio: la extracción de marzo llega el 1° de abril.
   Para un run programado es `data_interval_end`.
+- Los snapshots (`games`, `games_metadata`) solo se copian si su SHA-256 difiere del último snapshot
+  con partición ≤ al mes de ingesta del run. Silver lee ese snapshot (`bronze.snapshot_dir`). Detalle y
+  motivo (incluido por qué no hardlinks) en el README, sección *Bronze y los snapshots*.
 - `validate_bronze` verifica el contrato mínimo: que cada archivo exista, que tenga las columnas
   clave y que no esté vacío. Si algo falla, el run se corta antes de tocar Silver.
 
@@ -71,7 +74,7 @@ funciona sobre la tabla de hechos, que es la que crece.
 - Es la dimensión por la que filtran casi todas las consultas.
 - Coincide con la ventana de procesamiento del DAG: un run = una partición, lo que hace trivial
   el overwrite idempotente.
-- Da 36 particiones de entre 63k y 171k filas cada una (pocos MB por archivo). Particionar por día daría
+- Da 36 particiones de entre 40k y 108k filas cada una (pocos MB por archivo). Particionar por día daría
   más de 1000 archivos chicos, y particionar por `app_id` haría que el run de un mes reescriba
   miles de carpetas.
 

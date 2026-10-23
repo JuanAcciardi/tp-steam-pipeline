@@ -70,6 +70,8 @@ def steam_medallion_pipeline():
         landed = bronze.land(window)
         log.info("Mes de negocio %s ingestado en ingested_year=%s/ingested_month=%s",
                  window.label, window.ingested_year, window.ingested_month)
+        for table in config.SNAPSHOT_TABLES:
+            log.info("Snapshot %s: %s (%s)", table, landed[table]["status"], landed[table]["path"])
         return landed
 
     @task
