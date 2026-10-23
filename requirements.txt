@@ -1,7 +1,7 @@
 # Dependencias del pipeline sobre la imagen apache/airflow:3.0.4-python3.12.
-# Se instalan con el constraints file de Airflow (ver Dockerfile) para que todo el equipo
-# tenga exactamente las mismas versiones.
-pandas
-pyarrow
-duckdb
-pytest
+# Versiones fijadas iguales a las del constraints file de Airflow 3.0.4 / Python 3.12
+# (ver Dockerfile): si no coincidieran, pip fallaría al instalar con --constraint.
+pandas==2.1.4
+pyarrow==18.1.0
+duckdb==1.3.2
+pytest==8.4.1
