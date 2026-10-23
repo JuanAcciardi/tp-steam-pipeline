@@ -112,7 +112,8 @@ services:
     command:
       - -c
       - |
-        mkdir -p /opt/airflow/{logs,data,landing}
+        # La consigna pide que la estructura de capas exista antes de la primera ejecución.
+        mkdir -p /opt/airflow/{logs,landing} /opt/airflow/data/{bronze,silver,gold}
         chown -R "${AIRFLOW_UID:-50000}:0" /opt/airflow/{logs,data}
         exec /entrypoint airflow version
     environment:
