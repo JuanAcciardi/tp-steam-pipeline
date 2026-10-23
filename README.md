@@ -29,6 +29,7 @@ scripts/
   finops_validation.py     EXPLAIN ANALYZE full scan vs. pruned scan
   idempotency_check.py     evidencia del test de idempotencia
 sql/                       consultas de validación y de ejemplo
+tests/                     pytest de steam_lib (PII, deduplicación, fechas)
 docs/                      arquitectura, defensa y workflow del equipo
 docker-compose.yaml        Airflow 3.0.4 + Postgres, LocalExecutor
 landing/  (no versionado)  origen: extracciones mensuales tal como llegan
@@ -294,6 +295,17 @@ docker compose exec -T airflow-scheduler python scripts/finops_validation.py --y
 
 > Para repetir la prueba (por ejemplo en la defensa) sin pisar estas evidencias, usen `--out /tmp/...`.
 
+### Tests
+
+Cubren el hash de PII (determinístico con el mismo salt, distinto con otro, normalización), la
+deduplicación (una fila por clave: la review editada más reciente y el último registro de usuario)
+y el parseo de fechas en los formatos sucios del origen. Corren dentro del contenedor, con las mismas
+versiones que el pipeline:
+
+```bash
+docker compose run --rm --no-deps airflow-cli python -m pytest -q -p no:cacheprovider tests
+```
+
 ## Estado del TP
 
 Actualizado al 23/10/2026.
@@ -319,7 +331,7 @@ Actualizado al 23/10/2026.
 - [x] Generar las evidencias de la entrega y commitearlas en `docs/` (ver [Validaciones de la entrega](#validaciones-de-la-entrega)).
 - [x] Capturas de la UI: Graph view y un run exitoso.
 - [ ] Publicar el release `dataset-v2` (el PR de esta rama queda en draft hasta entonces).
-- [ ] Tests unitarios de `steam_lib` y CI en GitHub Actions.
+- [x] Tests mínimos de `steam_lib` con pytest (ver [Tests](#tests)).
 - [x] Bajar el dataset a ≤ 300 MB (`dataset-v2`, 272,5 MB).
 - [ ] Ensayar la defensa con [docs/defense.md](docs/defense.md).
 

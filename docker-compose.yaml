@@ -32,6 +32,7 @@ x-airflow-common:
   volumes:
     - ./dags:/opt/airflow/dags
     - ./scripts:/opt/airflow/scripts
+    - ./tests:/opt/airflow/tests       # pytest de steam_lib
     - ./sql:/opt/airflow/sql
     - ./docs:/opt/airflow/docs         # evidencias de FinOps / idempotencia para la entrega
     - ./landing:/opt/airflow/landing   # origen: dataset del release, particionado y sucio
