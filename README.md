@@ -144,7 +144,8 @@ python3 scripts/downsample_v2.py --src landing --out datasets/landing-v2 --zip d
 - **Se mantienen los 36 meses**, para que la demostración de partition pruning siga siendo 36 → 1.
 - **Cada usuario elegido conserva todas sus reviews y su perfil.** El script falla si aparece algún
   huérfano nuevo. Los únicos que quedan son los que ya traía el origen: perfiles y reviews cuyo
-  registro en `users` tiene el `user_id` vacío (problema de calidad intencional; 1.374 usuarios en v1, 888 en v2).
+  registro en `users` falta (1.374 usuarios en v1, 888 en v2). En el v2, 860 corresponden a filas de `users` con el
+  `user_id` vacío (problema de calidad intencional) y 28 directamente no tienen fila en `users`; ambos casos ya estaban en el v1.
 - **Los registros se copian byte a byte**, así que los problemas de calidad se mantienen en la misma
   proporción (el script imprime la comparación antes/después; por ejemplo, reviews editadas 2,18% → 2,18%,
   fechas `DD/MM/YYYY` 5,0% → 5,0%, emails con mayúsculas/espacios 9,90% → 9,88%). `games` y `games_metadata` no cambian.
@@ -265,7 +266,7 @@ extracción futura con otros problemas no rompa el pipeline ni contamine Gold.
 | user_profiles.country_code en minúscula | se pasa a mayúscula | Los códigos ISO 3166 van en mayúscula; si no, `ar` y `AR` serían dos países distintos. |
 | user_profiles.email con mayúsculas o espacios | trim + minúscula antes de hashear | El mismo email tiene que dar siempre el mismo hash para que los analistas puedan joinear (ver [PII](#pii)). |
 | Gold: usuario sin perfil | left join, atributos nulos | Que falte el perfil no invalida la review. |
-| Gold: review de un usuario sin fila en users (su `user_id` venía vacío en `users`; 888 usuarios en el dataset-v2) | left join: `user_products` y `user_review_count` nulos; la review y el perfil se mantienen | La review y el perfil son válidos. Descartarlos por un problema de otra tabla sesgaría el % de recomendación. |
+| Gold: review de un usuario sin fila en users (888 usuarios en el dataset-v2: 860 por filas de `users` con `user_id` vacío y 28 sin fila en el origen) | left join: `user_products` y `user_review_count` nulos; la review y el perfil se mantienen | La review y el perfil son válidos. Descartarlos por un problema de otra tabla sesgaría el % de recomendación. |
 
 ## Validaciones de la entrega
 
