@@ -76,7 +76,7 @@ vez. Como escribimos en un temporal, un fallo a mitad de camino deja la versión
   atacante no puede armar un diccionario de emails→hash, porque cada hash depende de un secreto
   que no está en los archivos. Sin salt, `sha256("juan@gmail.com")` se rompe por fuerza bruta en
   segundos.
-- **¿Por qué una Airflow Variable y no una constante?** Una constante queda en el repo (público)
+- **¿Por qué una Airflow Variable y no una constante?** Una constante queda en el repo (privado)
   y en su historial para siempre. La Variable vive en la metadata DB, cifrada con la Fernet key
   de `.env` (que tampoco se versiona), y se puede rotar sin tocar código.
 - `full_name` y `phone_number` ni siquiera llegan a Silver.
