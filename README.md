@@ -250,6 +250,7 @@ extracción futura con otros problemas no rompa el pipeline ni contamine Gold.
 | games / games_metadata duplicados | gana la última fila del snapshot | El catálogo es append-only: la última fila es la versión vigente. |
 | games.title nulo | `"Unknown Title"` | El juego sigue siendo válido para las métricas. |
 | games.rating nulo | `"No Rating"` | Es una categoría explícita, en lugar de un hueco en los group by. |
+| games.rating con casing mezclado (`very positive`, `VERY POSITIVE`) | se normaliza a Title Case | Si no, la misma categoría aparece varias veces en los group by. |
 | games.win/mac/linux/steam_deck nulo | `False` | Si la plataforma no está declarada, no se considera soportada. |
 | games.price_* negativo / discount o positive_ratio fuera de 0–100 | nulo | Son imposibles de negocio; mejor nulo que un valor falso. |
 | games.date_release no parseable | queda nulo | Es un atributo descriptivo y no bloquea los joins. |
@@ -257,9 +258,13 @@ extracción futura con otros problemas no rompa el pipeline ni contamine Gold.
 | users.user_id nulo | se descarta | No se puede joinear. |
 | users.products / reviews nulo o negativo | queda nulo | Imputar 0 sesgaría los perfiles de actividad. |
 | users / user_profiles duplicados | gana la última fila | La última versión del registro es la vigente. |
+| user_profiles.user_id nulo | se descarta | No se puede joinear con users ni con las reviews. |
 | user_profiles.email nulo | `email_hash` nulo, la fila se mantiene | El usuario existe aunque no haya dejado su email. |
 | user_profiles.country_code nulo | `"ZZ"` (código ISO reservado para "desconocido") | Permite agrupar sin perder filas. |
+| user_profiles.country_code en minúscula | se pasa a mayúscula | Los códigos ISO 3166 van en mayúscula; si no, `ar` y `AR` serían dos países distintos. |
+| user_profiles.email con mayúsculas o espacios | trim + minúscula antes de hashear | El mismo email tiene que dar siempre el mismo hash para que los analistas puedan joinear (ver [PII](#pii)). |
 | Gold: usuario sin perfil | left join, atributos nulos | Que falte el perfil no invalida la review. |
+| Gold: review de un usuario sin fila en users (su `user_id` venía vacío en `users`; 888 usuarios en el dataset-v2) | left join: `user_products` y `user_review_count` nulos; la review y el perfil se mantienen | La review y el perfil son válidos. Descartarlos por un problema de otra tabla sesgaría el % de recomendación. |
 
 ## Validaciones de la entrega
 
