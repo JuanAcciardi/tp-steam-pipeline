@@ -10,8 +10,7 @@ datasets/
 *.duckdb.wal
 # PII sintética
 user_profiles*.csv
-# Evidencias generadas localmente (copiar a mano a docs/ las que se entregan)
-docs/idempotency_*.json
+# Las evidencias de docs/ (idempotency_*.json, finops_output.txt) se entregan: sí se versionan.
 
 # Secretos
 .env
