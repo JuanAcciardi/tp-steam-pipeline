@@ -13,12 +13,16 @@ docker info > /dev/null 2>&1 || { echo "Docker no está corriendo."; exit 1; }
 # El repo es privado: el dataset se baja con gh (autenticado), no con una URL pública.
 gh auth status > /dev/null 2>&1 || { echo "Falta gh autenticado: instalar GitHub CLI y correr 'gh auth login'."; exit 1; }
 
-echo "2/6 Generando .env (UID + Fernet key para cifrar las Variables)..."
+echo "2/6 Generando .env (UID, Fernet key para cifrar las Variables y secreto JWT)..."
 if [[ ! -f .env ]]; then
   fernet=$(head -c 32 /dev/urandom | base64 | tr '+/' '-_')
   printf "AIRFLOW_UID=%s\nAIRFLOW_FERNET_KEY=%s\n" "$(id -u)" "$fernet" > .env
 else
   echo "    .env ya existe, se conserva."
+fi
+# Los .env creados antes de que existiera AIRFLOW_JWT_SECRET se completan sin tocar el resto.
+if ! grep -q '^AIRFLOW_JWT_SECRET=' .env; then
+  printf "AIRFLOW_JWT_SECRET=%s\n" "$(head -c 32 /dev/urandom | base64 | tr '+/' '-_')" >> .env
 fi
 
 echo "3/6 Descargando el dataset de origen (release dataset-v2)..."

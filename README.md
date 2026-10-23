@@ -48,7 +48,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1     # Windows
 
 El script hace todo, y se puede volver a correr sin pisar lo que ya existe:
 
-1. Genera `.env` con una Fernet key propia, que cifra las Variables en la metadata DB.
+1. Genera `.env` con una Fernet key propia, que cifra las Variables en la metadata DB, y el secreto JWT que comparten el scheduler y el apiserver.
 2. Descarga el dataset de origen (y verifica su SHA-256) desde el release [`dataset-v2`](https://github.com/JuanAcciardi/tp-steam-pipeline/releases/tag/dataset-v2) (zip de 93,6 MB) y lo descomprime en `landing/` (272,5 MB). Si `landing/` tiene otra versión (por ejemplo la v1), la reemplaza.
 3. Construye la imagen e inicializa Airflow.
 4. Pide el `PII_SALT` (el del grupo de WhatsApp) y lo guarda con `airflow variables set PII_SALT ...`.
@@ -85,6 +85,7 @@ CLI de Airflow: `docker compose run --rm airflow-cli airflow <comando>`.
 | Docker se cae o el disco C: se llena | Docker Desktop → Settings → Resources → Advanced → *Disk image location* → elegí otro disco → *Apply & restart*. |
 | `Falta gh autenticado` | `gh auth login`, y verificá que aceptaste la invitación al repo. |
 | `Falta AIRFLOW_FERNET_KEY en .env` | Corré el script de setup (genera `.env`). No copies el `.env` de otro integrante. |
+| `Falta AIRFLOW_JWT_SECRET en .env`, o las tasks fallan con `Invalid auth token: Signature verification failed` y el log vacío | Volvé a correr el setup (agrega la variable sin tocar el resto del `.env`) y después `docker compose up -d`. |
 | El DAG no aparece o muestra *Import error* | `docker compose run --rm airflow-cli airflow dags list-import-errors` (lee los errores que guardó el dag-processor en la base; con `--local` parsea en el contenedor del CLI) |
 | En *Health* el Triggerer aparece en rojo | Es esperable: el compose no levanta triggerer porque el DAG no usa operadores *deferrable*. No afecta al TP. |
 | `mask_pii` falla con `PII_SALT vacío` | `docker compose run --rm airflow-cli airflow variables set PII_SALT '<el del WhatsApp>'` |

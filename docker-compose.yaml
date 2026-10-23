@@ -17,6 +17,10 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     # Cifra las Variables (PII_SALT) en la metadata DB. Lo genera el script de setup en .env.
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:?Falta AIRFLOW_FERNET_KEY en .env, correr scripts/setup}
+    # El scheduler firma un JWT por task y el apiserver lo valida: tienen que compartir el secreto.
+    # Sin esto cada contenedor genera uno propio en su airflow.cfg y las tasks fallan con
+    # "Invalid auth token: Signature verification failed" (403) antes de escribir el log.
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:?Falta AIRFLOW_JWT_SECRET en .env, correr scripts/setup}
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'

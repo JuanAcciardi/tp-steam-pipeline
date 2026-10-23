@@ -23,6 +23,13 @@ if (-not (Test-Path .env)) {
     $fernet = [Convert]::ToBase64String($bytes).Replace('+', '-').Replace('/', '_')
     "AIRFLOW_UID=50000`nAIRFLOW_FERNET_KEY=$fernet" | Set-Content .env -Encoding ascii
 } else { Write-Host "    .env ya existe, se conserva." }
+# Los .env creados antes de que existiera AIRFLOW_JWT_SECRET se completan sin tocar el resto.
+if (-not (Select-String -Path .env -Pattern '^AIRFLOW_JWT_SECRET=' -Quiet)) {
+    $bytes = New-Object byte[] 32
+    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+    $jwt = [Convert]::ToBase64String($bytes).Replace('+', '-').Replace('/', '_')
+    "AIRFLOW_JWT_SECRET=$jwt" | Add-Content .env -Encoding ascii
+}
 
 Write-Host "3/6 Descargando el dataset de origen (release dataset-v2)..."
 New-Item -ItemType Directory -Force data, landing, logs | Out-Null
