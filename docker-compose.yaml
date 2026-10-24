@@ -17,14 +17,22 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     # Cifra las Variables (PII_SALT) en la metadata DB. Lo genera el script de setup en .env.
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:?Falta AIRFLOW_FERNET_KEY en .env, correr scripts/setup}
+    # El scheduler firma un JWT por task y el apiserver lo valida: tienen que compartir el secreto.
+    # Sin esto cada contenedor genera uno propio en su airflow.cfg y las tasks fallan con
+    # "Invalid auth token: Signature verification failed" (403) antes de escribir el log.
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:?Falta AIRFLOW_JWT_SECRET en .env, correr scripts/setup}
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: '30'
+    # steam_lib vive en dags/. El dag-processor y los tasks agregan esa carpeta al sys.path,
+    # pero el CLI (airflow dags test) no: sin esto falla con "No module named 'steam_lib'".
+    PYTHONPATH: /opt/airflow/dags
   volumes:
     - ./dags:/opt/airflow/dags
     - ./scripts:/opt/airflow/scripts
+    - ./tests:/opt/airflow/tests       # pytest de steam_lib
     - ./sql:/opt/airflow/sql
     - ./docs:/opt/airflow/docs         # evidencias de FinOps / idempotencia para la entrega
     - ./landing:/opt/airflow/landing   # origen: dataset del release, particionado y sucio
@@ -105,7 +113,8 @@ services:
     command:
       - -c
       - |
-        mkdir -p /opt/airflow/{logs,data,landing}
+        # La consigna pide que la estructura de capas exista antes de la primera ejecución.
+        mkdir -p /opt/airflow/{logs,landing} /opt/airflow/data/{bronze,silver,gold}
         chown -R "${AIRFLOW_UID:-50000}:0" /opt/airflow/{logs,data}
         exec /entrypoint airflow version
     environment:

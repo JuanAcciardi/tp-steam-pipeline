@@ -1,0 +1,162 @@
+=== FULL SCAN (sin filtro de partición) ===
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+-- Escaneo completo: sin filtro de partición, DuckDB lee todos los Parquet de Gold. EXPLAIN ANALYZE SELECT year, month, COUNT(*) AS records, AVG(hours) AS avg_hours,        AVG(CASE WHEN is_recommended THEN 1 ELSE 0 END) AS pct_recommended FROM read_parquet('/opt/airflow/data/gold/user_game_reviews/**/*.parquet', hive_partitioning = true) GROUP BY year, month ORDER BY year, month; 
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││              Total Time: 0.0070s             ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│  read_parquet."year" ASC  │
+│  read_parquet."month" ASC │
+│                           │
+│          36 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│   PARTITIONED_AGGREGATE   │
+│    ────────────────────   │
+│          Groups:          │
+│             #0            │
+│             #1            │
+│                           │
+│        Aggregates:        │
+│        count_star()       │
+│          avg(#2)          │
+│          avg(#3)          │
+│                           │
+│          36 Rows          │
+│          (0.01s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│            year           │
+│           month           │
+│           hours           │
+│ CASE  WHEN (is_recommended│
+│   ) THEN (1) ELSE 0 END   │
+│                           │
+│        2173455 Rows       │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         TABLE_SCAN        │
+│    ────────────────────   │
+│         Function:         │
+│        READ_PARQUET       │
+│                           │
+│        Projections:       │
+│            year           │
+│           month           │
+│           hours           │
+│       is_recommended      │
+│                           │
+│    Total Files Read: 36   │
+│                           │
+│        2173455 Rows       │
+│          (0.05s)          │
+└───────────────────────────┘
+
+
+=== PRUNED SCAN (year=2021, month=03) ===
+┌─────────────────────────────────────┐
+│┌───────────────────────────────────┐│
+││    Query Profiling Information    ││
+│└───────────────────────────────────┘│
+└─────────────────────────────────────┘
+-- Misma consulta con filtro sobre las columnas de partición: DuckDB descarta carpetas -- year=/month= que no matchean antes de abrir los archivos (partition pruning). EXPLAIN ANALYZE SELECT year, month, COUNT(*) AS records, AVG(hours) AS avg_hours,        AVG(CASE WHEN is_recommended THEN 1 ELSE 0 END) AS pct_recommended FROM read_parquet('/opt/airflow/data/gold/user_game_reviews/**/*.parquet', hive_partitioning = true) WHERE year = '2021' AND month = '03' GROUP BY year, month ORDER BY year, month; 
+┌────────────────────────────────────────────────┐
+│┌──────────────────────────────────────────────┐│
+││              Total Time: 0.0024s             ││
+│└──────────────────────────────────────────────┘│
+└────────────────────────────────────────────────┘
+┌───────────────────────────┐
+│           QUERY           │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│      EXPLAIN_ANALYZE      │
+│    ────────────────────   │
+│           0 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          ORDER_BY         │
+│    ────────────────────   │
+│  read_parquet."year" ASC  │
+│  read_parquet."month" ASC │
+│                           │
+│           1 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│   PARTITIONED_AGGREGATE   │
+│    ────────────────────   │
+│          Groups:          │
+│             #0            │
+│             #1            │
+│                           │
+│        Aggregates:        │
+│        count_star()       │
+│          avg(#2)          │
+│          avg(#3)          │
+│                           │
+│           1 Rows          │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│            year           │
+│           month           │
+│           hours           │
+│ CASE  WHEN (is_recommended│
+│   ) THEN (1) ELSE 0 END   │
+│                           │
+│         53607 Rows        │
+│          (0.00s)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         TABLE_SCAN        │
+│    ────────────────────   │
+│         Function:         │
+│        READ_PARQUET       │
+│                           │
+│        Projections:       │
+│            year           │
+│           month           │
+│           hours           │
+│       is_recommended      │
+│                           │
+│       File Filters:       │
+│(year = 2021)(month = '03')│
+│                           │
+│    Scanning Files: 1/36   │
+│    Total Files Read: 1    │
+│                           │
+│         53607 Rows        │
+│          (0.00s)          │
+└───────────────────────────┘
+
+
+=== RESUMEN ===
+                Parquet leídos    Filas leídas
+Full scan                   36       2,173,455
+Pruned scan                  1          53,607
+
+El filtro de partición evita leer el 97.5% de las filas.

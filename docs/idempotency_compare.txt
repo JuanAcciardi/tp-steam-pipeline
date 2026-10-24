@@ -1,0 +1,10 @@
+capa                           antes     después  idéntico
+month                        2021-03     2021-03  sí
+silver_recommendations        53,607      53,607  sí
+silver_quarantine                 89          89  sí
+silver_users                  21,385      21,385  sí
+silver_user_profiles          21,403      21,403  sí
+gold_partition                53,607      53,607  sí
+gold_total_files                  36          36  sí
+
+IDEMPOTENTE

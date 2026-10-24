@@ -7,7 +7,7 @@ $ProgressPreference = "SilentlyContinue"   # Expand-Archive es muy lento con la 
 $Repo = Split-Path $PSScriptRoot -Parent
 Set-Location $Repo
 $RepoSlug = "JuanAcciardi/tp-steam-pipeline"
-$DatasetSha256 = "b4bcce006ada6376c2ab7d64285596f309bf3a47df690cfb3b412ce16855810a"
+$DatasetSha256 = "e46e3b55529dbaa533e9c7708b7070bcebb08451a0d626fe228d13bc9f082daa"
 
 Write-Host "1/6 Verificando Docker..."
 docker info *> $null
@@ -23,18 +23,31 @@ if (-not (Test-Path .env)) {
     $fernet = [Convert]::ToBase64String($bytes).Replace('+', '-').Replace('/', '_')
     "AIRFLOW_UID=50000`nAIRFLOW_FERNET_KEY=$fernet" | Set-Content .env -Encoding ascii
 } else { Write-Host "    .env ya existe, se conserva." }
+# Los .env creados antes de que existiera AIRFLOW_JWT_SECRET se completan sin tocar el resto.
+if (-not (Select-String -Path .env -Pattern '^AIRFLOW_JWT_SECRET=' -Quiet)) {
+    $bytes = New-Object byte[] 32
+    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+    $jwt = [Convert]::ToBase64String($bytes).Replace('+', '-').Replace('/', '_')
+    "AIRFLOW_JWT_SECRET=$jwt" | Add-Content .env -Encoding ascii
+}
 
-Write-Host "3/6 Descargando el dataset de origen (release dataset-v1)..."
+Write-Host "3/6 Descargando el dataset de origen (release dataset-v2)..."
 New-Item -ItemType Directory -Force data, landing, logs | Out-Null
-if (-not (Test-Path landing\_manifest.json)) {
+# Si landing\ tiene otra version del dataset (por ejemplo la v1), se reemplaza por la v2.
+$manifest = "landing\_manifest.json"
+if ((Test-Path $manifest) -and -not (Select-String -Path $manifest -Pattern '"dataset": "dataset-v2"' -Quiet)) {
+    Write-Host "    landing\ tiene otra version del dataset: se reemplaza por dataset-v2."
+    Remove-Item landing\* -Recurse -Force
+}
+if (-not (Test-Path $manifest)) {
     $tmp = Join-Path $env:TEMP "steam-dataset"
-    gh release download dataset-v1 -R $RepoSlug -p steam-landing.zip -D $tmp --clobber
-    if ($LASTEXITCODE -ne 0) { throw "No se pudo descargar el release dataset-v1" }
+    gh release download dataset-v2 -R $RepoSlug -p steam-landing.zip -D $tmp --clobber
+    if ($LASTEXITCODE -ne 0) { throw "No se pudo descargar el release dataset-v2" }
     $zip = Join-Path $tmp "steam-landing.zip"
     if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne $DatasetSha256.ToUpper()) { throw "SHA-256 del dataset no coincide" }
     Expand-Archive $zip -DestinationPath landing -Force
     Remove-Item $tmp -Recurse
-} else { Write-Host "    landing/ ya tiene el dataset, se conserva." }
+} else { Write-Host "    landing/ ya tiene el dataset-v2, se conserva." }
 
 Write-Host "4/6 Construyendo la imagen e inicializando Airflow..."
 docker compose build

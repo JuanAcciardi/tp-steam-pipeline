@@ -21,17 +21,19 @@ gh pr create --base develop --fill
 - Si cambian una regla de nulos o deduplicación en `steam_lib/silver.py`, actualicen la tabla del README en el mismo PR.
 - Nunca commitear datos (`landing/`, `data/`) ni `.env`. El `.gitignore` ya los excluye.
 - **El `PII_SALT` no se escribe en ningún lado del repo** (archivos, commits, issues, PRs). Se pasó por WhatsApp.
-- Todos usan el mismo `PII_SALT` y el mismo dataset (release `dataset-v1`), así los conteos y los hashes coinciden entre máquinas.
-- Si cambian el DAG o `steam_lib`, prueben un mes completo (*Trigger* con `{"month": "2021-03"}`) antes de abrir el PR.
+- Todos usan el mismo `PII_SALT` y el mismo dataset (release `dataset-v2`), así los conteos y los hashes coinciden entre máquinas.
+- Si cambian el DAG o `steam_lib`, prueben un mes completo antes de abrir el PR: `airflow dags test steam_medallion_pipeline 2021-03-15 -c '{"month": "2021-03"}'` (ver README, *Correr el pipeline*). Si usan *Trigger* con el DAG pausado, destilden "Unpause on trigger".
 
-## Reparto
+## Integrantes y reparto
 
-Completen los nombres.
+Áreas del TP: repo, setup, DAG y orquestación · Bronze y validación del contrato de entrada ·
+Silver (tipado, deduplicación, reglas de nulos y README) · PII y Gold · FinOps, idempotencia, docs
+y preparación de la defensa.
 
 | Integrante | Área |
 |---|---|
-| 1 | Repo, setup, DAG y orquestación |
-| 2 | Bronze y validación del contrato de entrada |
-| 3 | Silver: tipado, deduplicación, reglas de nulos y README |
-| 4 | PII y Gold |
-| 5 | FinOps, idempotencia, docs y preparación de la defensa |
+| Acciardi, Juan | _(a completar)_ |
+| Graffigna Lynch, Catalina | _(a completar)_ |
+| López Marsico, Verónica | _(a completar)_ |
+| Naón, Pedro | _(a completar)_ |
+| Robiollio, Antonella | _(a completar)_ |
