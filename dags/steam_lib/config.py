@@ -11,7 +11,7 @@ from pathlib import Path
 
 AIRFLOW_HOME = Path(os.environ.get("AIRFLOW_HOME", "~/airflow")).expanduser()
 
-# Sistema origen simulado (lo genera scripts/prepare_source.py). No es parte del medallion.
+# Sistema origen: dataset fuente publicado en el release dataset-v2 del repo. No es parte del medallion.
 LANDING_ROOT = Path(os.environ.get("STEAM_LANDING_ROOT", AIRFLOW_HOME / "landing")).expanduser()
 
 # Capas medallion exigidas por la consigna.
@@ -26,7 +26,7 @@ CATALOG_DB = DATA_ROOT / "catalog.duckdb"
 
 GOLD_DATASET = "user_game_reviews"
 
-# Ventana del backfill. Ajustar a lo que imprime scripts/prepare_source.py (manifest).
+# Ventana del backfill. Tiene que coincidir con los meses de landing/_manifest.json.
 FIRST_MONTH = "2020-01"
 LAST_MONTH = "2022-12"
 

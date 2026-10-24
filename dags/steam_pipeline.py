@@ -3,7 +3,7 @@
 Cada run procesa UN mes de negocio (data_interval_start) y sobrescribe solo las
 particiones de ese mes, por eso re-ejecutarlo da exactamente los mismos conteos.
 
-Nada de este mÃ³dulo toca la metadata DB al parsear: Variable.get vive dentro de los tasks.
+Nada de este módulo toca la metadata DB al parsear: Variable.get vive dentro de los tasks.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def _month_start(month: str) -> pendulum.DateTime:
 @dag(
     dag_id="steam_medallion_pipeline",
     description="Steam reviews: landing -> bronze -> silver -> gold (hive) -> DuckDB",
-    # Intervalos mensuales reales: data_interval_start = 1Â° del mes, data_interval_end = 1Â° del siguiente.
+    # Intervalos mensuales reales: data_interval_start = 1° del mes, data_interval_end = 1° del siguiente.
     schedule=CronDataIntervalTimetable("0 0 1 * *", timezone="UTC"),
     start_date=_month_start(config.FIRST_MONTH),
     end_date=_month_start(config.LAST_MONTH),
@@ -66,10 +66,12 @@ def steam_medallion_pipeline():
         window = _window()
         missing = bronze.missing_sources(window)
         if missing:
-            raise AirflowSkipException(f"Sin extracciÃ³n en landing para {window.label}: {missing}")
+            raise AirflowSkipException(f"Sin extracción en landing para {window.label}: {missing}")
         landed = bronze.land(window)
         log.info("Mes de negocio %s ingestado en ingested_year=%s/ingested_month=%s",
                  window.label, window.ingested_year, window.ingested_month)
+        for table in config.SNAPSHOT_TABLES:
+            log.info("Snapshot %s: %s (%s)", table, landed[table]["status"], landed[table]["path"])
         return landed
 
     @task
@@ -100,7 +102,7 @@ def steam_medallion_pipeline():
     @task
     def mask_pii() -> dict:
         window = _window()
-        salt = Variable.get("PII_SALT")  # en runtime, nunca a nivel de mÃ³dulo
+        salt = Variable.get("PII_SALT")  # en runtime, nunca a nivel de módulo
         profiles, stats = pii.mask_profiles(
             silver.read_raw_csv(bronze.bronze_file("user_profiles", window)), salt
         )
@@ -115,7 +117,7 @@ def steam_medallion_pipeline():
             silver.read_raw_csv(bronze.bronze_file("recommendations", window)), window, games["app_id"]
         )
         write_parquet(recs, silver.silver_part("recommendations", window))
-        # La cuarentena se sobrescribe aunque estÃ© vacÃ­a, para que un re-run no deje restos.
+        # La cuarentena se sobrescribe aunque esté vacía, para que un re-run no deje restos.
         write_parquet(quarantine, silver.quarantine_part("recommendations", window))
         log.info("Silver recommendations %s: %s", window.label, stats)
         return stats
