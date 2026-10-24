@@ -277,7 +277,7 @@ Las evidencias se generaron dentro de Airflow (Docker, versiones fijadas de `req
 
 | Evidencia | Resultado | Archivos |
 |---|---|---|
-| Backfill y DAG | 36/36 runs `scheduled` en `success`; Graph view con los 9 tasks; detalle de un run con todas las tasks en `success` | [`airflow_graph.jpeg`](docs/airflow_graph.jpeg), [`airflow_run_detail.jpeg`](docs/airflow_run_detail.jpeg) |
+| Backfill y DAG | 36/36 runs `scheduled` en `success`; Graph view con los 9 tasks; detalle de un run con todas las tasks en `success` | [`airflow_runs.jpeg`](docs/airflow_runs.jpeg), [`airflow_graph.jpeg`](docs/airflow_graph.jpeg), [`airflow_run_detail.jpeg`](docs/airflow_run_detail.jpeg) |
 | Idempotencia (2021-03) | Re-ejecución desde el scheduler con *Clear* del run `scheduled__2021-03-01` (2° intento de cada task). Silver, cuarentena, Gold y cantidad de archivos idénticos (53.607 reviews en Silver y Gold, 89 en cuarentena) y **mismos SHA-256** de cada Parquet antes y después | [`idempotency_before.json`](docs/idempotency_before.json), [`idempotency_after.json`](docs/idempotency_after.json), [`idempotency_compare.txt`](docs/idempotency_compare.txt) |
 | FinOps (DuckDB `EXPLAIN ANALYZE`) | Full scan: 36 Parquet, 2.173.455 filas. Pruned (`year=2021, month=03`): 1 de 36 Parquet, 53.607 filas (**−97,5%**) | [`finops_output.txt`](docs/finops_output.txt) |
 
