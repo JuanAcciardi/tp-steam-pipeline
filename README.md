@@ -293,8 +293,6 @@ diff docs/idempotency_before.json docs/idempotency_after.json && echo "Snapshots
 docker compose exec -T airflow-scheduler python scripts/finops_validation.py --year 2021 --month 03 --out docs/finops_output.txt
 ```
 
-> Para repetir la prueba (por ejemplo en la defensa) sin pisar estas evidencias, usen `--out /tmp/...`.
-
 ### Tests
 
 Cubren el hash de PII (determinístico con el mismo salt, distinto con otro, normalización), la
@@ -325,15 +323,6 @@ Actualizado al 23/10/2026.
 | Repo con `/dags`, `/scripts`, `/sql`, `/docs` y `.gitignore` | ✅ |
 | Ramas `main` / `develop` / `feature/*` con PRs | ✅ en uso. ⚠️ La protección automática de `main` no está activa (repo privado + cuenta gratuita); se activa con GitHub Education/Pro. Mientras tanto, **nadie pushea directo a `main` ni a `develop`** |
 
-### Próximos pasos
-
-- [x] Correr el backfill completo **dentro de Airflow** (36/36 en `success`).
-- [x] Generar las evidencias de la entrega y commitearlas en `docs/` (ver [Validaciones de la entrega](#validaciones-de-la-entrega)).
-- [x] Capturas de la UI: Graph view y un run exitoso.
-- [ ] Publicar el release `dataset-v2` (el PR de esta rama queda en draft hasta entonces).
-- [x] Tests mínimos de `steam_lib` con pytest (ver [Tests](#tests)).
-- [x] Bajar el dataset a ≤ 300 MB (`dataset-v2`, 272,5 MB).
-- [ ] Ensayar la defensa con [docs/defense.md](docs/defense.md).
 
 ## Workflow del equipo
 
