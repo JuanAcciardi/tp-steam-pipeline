@@ -1,8 +1,5 @@
 # Preparación de la defensa
 
-Guion para cada bloque de preguntas de la consigna (sección 7). Antes de la defensa: Airflow
-levantado, backfill completo y una terminal con el repo abierta.
-
 ## Demo en vivo (≈5 min)
 
 1. UI → `steam_medallion_pipeline` → **Graph**: recorrer los 9 tasks.
@@ -16,8 +13,7 @@ levantado, backfill completo y una terminal con el repo abierta.
    docker compose exec airflow-scheduler python scripts/idempotency_check.py compare --month 2021-03 --baseline /tmp/idempotency_demo.json
    ```
    Evidencia ya generada: `docs/idempotency_compare.txt` (y los snapshots `idempotency_before/after.json`, con SHA-256 idénticos).
-4. FinOps: `docker compose exec airflow-scheduler python scripts/finops_validation.py --year 2021 --month 03` (sin `--out`,
-   para no pisar `docs/finops_output.txt`).
+4. FinOps: `docker compose exec airflow-scheduler python scripts/finops_validation.py --year 2021 --month 03`
 
 ## Idempotencia
 
